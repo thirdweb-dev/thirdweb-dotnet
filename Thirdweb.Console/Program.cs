@@ -23,10 +23,33 @@ Console.WriteLine($"Contract read result: {readResult}");
 
 // Create wallets (this is an advanced use case, typically one wallet is plenty)
 var privateKeyWallet = await PrivateKeyWallet.Create(client: client, privateKeyHex: privateKey);
-var walletAddress = await privateKeyWallet.GetAddress();
 
-var chainData = await Utils.FetchThirdwebChainDataAsync(client, 421614);
-Console.WriteLine($"Chain data: {JsonConvert.SerializeObject(chainData, Formatting.Indented)}");
+// var privateKeyWallet = await PrivateKeyWallet.Generate(client: client);
+var walletAddress = await privateKeyWallet.GetAddress();
+Console.WriteLine($"Private Key Wallet address: {walletAddress}");
+
+var smartWallet7579 = await SmartWallet.Create(
+    personalWallet: privateKeyWallet,
+    chainId: 11155111,
+    gasless: true,
+    factoryAddress: "0x296e57E8a808aE80625A3CB5Ba95684fb99fEff2",
+    entryPoint: Thirdweb.Constants.ENTRYPOINT_ADDRESS_V07
+);
+Console.WriteLine($"Smart Wallet address: {await smartWallet7579.GetAddress()}");
+
+var receipt = await smartWallet7579.SendTransaction(
+    new ThirdwebTransactionInput()
+    {
+        From = await smartWallet7579.GetAddress(),
+        To = await smartWallet7579.GetAddress(),
+        Value = new HexBigInteger(BigInteger.Zero),
+        Data = "0x"
+    }
+);
+Console.WriteLine($"Transaction receipt: {JsonConvert.SerializeObject(receipt, Formatting.Indented)}");
+
+// var chainData = await Utils.FetchThirdwebChainDataAsync(client, 421614);
+// Console.WriteLine($"Chain data: {JsonConvert.SerializeObject(chainData, Formatting.Indented)}");
 
 // var smartWallet = await SmartWallet.Create(privateKeyWallet, 78600);
 

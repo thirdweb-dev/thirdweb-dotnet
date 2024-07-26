@@ -353,5 +353,39 @@ namespace Thirdweb
                 throw new Exception($"Unexpected error while fetching chain data for chain ID {chainId}: {ex.Message}", ex);
             }
         }
+
+        public static int GetEntryPointVersion(string address)
+        {
+            address = address.ToChecksumAddress();
+            return address switch
+            {
+                Constants.ENTRYPOINT_ADDRESS_V06 => 6,
+                Constants.ENTRYPOINT_ADDRESS_V07 => 7,
+                _ => 6,
+            };
+        }
+
+        public static byte[] HexToBytes32(this string hex)
+        {
+            if (hex.StartsWith("0x"))
+            {
+                hex = hex.Substring(2);
+            }
+
+            if (hex.Length > 64)
+            {
+                throw new ArgumentException("Hex string is too long to fit into 32 bytes.");
+            }
+
+            hex = hex.PadLeft(64, '0');
+
+            var bytes = new byte[32];
+            for (var i = 0; i < hex.Length; i += 2)
+            {
+                bytes[i / 2] = byte.Parse(hex.Substring(i, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            }
+
+            return bytes;
+        }
     }
 }

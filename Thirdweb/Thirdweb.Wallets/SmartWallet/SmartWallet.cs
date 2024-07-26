@@ -5,6 +5,7 @@ using Nethereum.ABI.EIP712;
 using Nethereum.Contracts;
 using Nethereum.Hex.HexConvertors.Extensions;
 using Nethereum.Hex.HexTypes;
+using Nethereum.Util;
 using Newtonsoft.Json;
 using Thirdweb.AccountAbstraction;
 
@@ -66,9 +67,12 @@ namespace Thirdweb
                 throw new InvalidOperationException("SmartAccount.Connect: Personal account must be connected.");
             }
 
-            bundlerUrl ??= $"https://{chainId}.bundler.thirdweb.com";
-            paymasterUrl ??= $"https://{chainId}.bundler.thirdweb.com";
-            entryPoint ??= Constants.DEFAULT_ENTRYPOINT_ADDRESS;
+            entryPoint ??= Constants.ENTRYPOINT_ADDRESS_V06;
+
+            var entryPointVersion = Utils.GetEntryPointVersion(entryPoint);
+
+            bundlerUrl ??= entryPointVersion == 6 ? $"https://{chainId}.bundler.thirdweb.com" : $"https://{chainId}.bundler.thirdweb.com/v2";
+            paymasterUrl ??= entryPointVersion == 6 ? $"https://{chainId}.bundler.thirdweb.com" : $"https://{chainId}.bundler.thirdweb.com/v2";
             factoryAddress ??= Constants.DEFAULT_FACTORY_ADDRESS;
 
             ThirdwebContract entryPointContract = null;
@@ -77,25 +81,17 @@ namespace Thirdweb
 
             if (!Utils.IsZkSync(chainId))
             {
-                entryPointContract = await ThirdwebContract.Create(
-                    personalWallet.Client,
-                    entryPoint,
-                    chainId,
-                    "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"preOpGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"paid\",\"type\":\"uint256\"},{\"internalType\":\"uint48\",\"name\":\"validAfter\",\"type\":\"uint48\"},{\"internalType\":\"uint48\",\"name\":\"validUntil\",\"type\":\"uint48\"},{\"internalType\":\"bool\",\"name\":\"targetSuccess\",\"type\":\"bool\"},{\"internalType\":\"bytes\",\"name\":\"targetResult\",\"type\":\"bytes\"}],\"name\":\"ExecutionResult\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"opIndex\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"reason\",\"type\":\"string\"}],\"name\":\"FailedOp\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"}],\"name\":\"SenderAddressResult\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"aggregator\",\"type\":\"address\"}],\"name\":\"SignatureValidationFailed\",\"type\":\"error\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"preOpGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"prefund\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"sigFailed\",\"type\":\"bool\"},{\"internalType\":\"uint48\",\"name\":\"validAfter\",\"type\":\"uint48\"},{\"internalType\":\"uint48\",\"name\":\"validUntil\",\"type\":\"uint48\"},{\"internalType\":\"bytes\",\"name\":\"paymasterContext\",\"type\":\"bytes\"}],\"internalType\":\"struct IEntryPoint.ReturnInfo\",\"name\":\"returnInfo\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"stake\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"unstakeDelaySec\",\"type\":\"uint256\"}],\"internalType\":\"struct IStakeManager.StakeInfo\",\"name\":\"senderInfo\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"stake\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"unstakeDelaySec\",\"type\":\"uint256\"}],\"internalType\":\"struct IStakeManager.StakeInfo\",\"name\":\"factoryInfo\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"stake\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"unstakeDelaySec\",\"type\":\"uint256\"}],\"internalType\":\"struct IStakeManager.StakeInfo\",\"name\":\"paymasterInfo\",\"type\":\"tuple\"}],\"name\":\"ValidationResult\",\"type\":\"error\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"preOpGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"prefund\",\"type\":\"uint256\"},{\"internalType\":\"bool\",\"name\":\"sigFailed\",\"type\":\"bool\"},{\"internalType\":\"uint48\",\"name\":\"validAfter\",\"type\":\"uint48\"},{\"internalType\":\"uint48\",\"name\":\"validUntil\",\"type\":\"uint48\"},{\"internalType\":\"bytes\",\"name\":\"paymasterContext\",\"type\":\"bytes\"}],\"internalType\":\"struct IEntryPoint.ReturnInfo\",\"name\":\"returnInfo\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"stake\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"unstakeDelaySec\",\"type\":\"uint256\"}],\"internalType\":\"struct IStakeManager.StakeInfo\",\"name\":\"senderInfo\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"stake\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"unstakeDelaySec\",\"type\":\"uint256\"}],\"internalType\":\"struct IStakeManager.StakeInfo\",\"name\":\"factoryInfo\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"stake\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"unstakeDelaySec\",\"type\":\"uint256\"}],\"internalType\":\"struct IStakeManager.StakeInfo\",\"name\":\"paymasterInfo\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"address\",\"name\":\"aggregator\",\"type\":\"address\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"stake\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"unstakeDelaySec\",\"type\":\"uint256\"}],\"internalType\":\"struct IStakeManager.StakeInfo\",\"name\":\"stakeInfo\",\"type\":\"tuple\"}],\"internalType\":\"struct IEntryPoint.AggregatorStakeInfo\",\"name\":\"aggregatorInfo\",\"type\":\"tuple\"}],\"name\":\"ValidationResultWithAggregation\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"userOpHash\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"factory\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"paymaster\",\"type\":\"address\"}],\"name\":\"AccountDeployed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[],\"name\":\"BeforeExecution\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"totalDeposit\",\"type\":\"uint256\"}],\"name\":\"Deposited\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"aggregator\",\"type\":\"address\"}],\"name\":\"SignatureAggregatorChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"totalStaked\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"unstakeDelaySec\",\"type\":\"uint256\"}],\"name\":\"StakeLocked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"withdrawTime\",\"type\":\"uint256\"}],\"name\":\"StakeUnlocked\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"withdrawAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"StakeWithdrawn\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"userOpHash\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"paymaster\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"actualGasCost\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"actualGasUsed\",\"type\":\"uint256\"}],\"name\":\"UserOperationEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"userOpHash\",\"type\":\"bytes32\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"revertReason\",\"type\":\"bytes\"}],\"name\":\"UserOperationRevertReason\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"withdrawAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"Withdrawn\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"SIG_VALIDATION_FAILED\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"initCode\",\"type\":\"bytes\"},{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"paymasterAndData\",\"type\":\"bytes\"}],\"name\":\"_validateSenderAndPaymaster\",\"outputs\":[],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"unstakeDelaySec\",\"type\":\"uint32\"}],\"name\":\"addStake\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"balanceOf\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"depositTo\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"deposits\",\"outputs\":[{\"internalType\":\"uint112\",\"name\":\"deposit\",\"type\":\"uint112\"},{\"internalType\":\"bool\",\"name\":\"staked\",\"type\":\"bool\"},{\"internalType\":\"uint112\",\"name\":\"stake\",\"type\":\"uint112\"},{\"internalType\":\"uint32\",\"name\":\"unstakeDelaySec\",\"type\":\"uint32\"},{\"internalType\":\"uint48\",\"name\":\"withdrawTime\",\"type\":\"uint48\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"getDepositInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"uint112\",\"name\":\"deposit\",\"type\":\"uint112\"},{\"internalType\":\"bool\",\"name\":\"staked\",\"type\":\"bool\"},{\"internalType\":\"uint112\",\"name\":\"stake\",\"type\":\"uint112\"},{\"internalType\":\"uint32\",\"name\":\"unstakeDelaySec\",\"type\":\"uint32\"},{\"internalType\":\"uint48\",\"name\":\"withdrawTime\",\"type\":\"uint48\"}],\"internalType\":\"struct IStakeManager.DepositInfo\",\"name\":\"info\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint192\",\"name\":\"key\",\"type\":\"uint192\"}],\"name\":\"getNonce\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"initCode\",\"type\":\"bytes\"}],\"name\":\"getSenderAddress\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"initCode\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"callData\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"verificationGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"preVerificationGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxFeePerGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxPriorityFeePerGas\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"paymasterAndData\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"internalType\":\"struct UserOperation\",\"name\":\"userOp\",\"type\":\"tuple\"}],\"name\":\"getUserOpHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"initCode\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"callData\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"verificationGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"preVerificationGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxFeePerGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxPriorityFeePerGas\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"paymasterAndData\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"internalType\":\"struct UserOperation[]\",\"name\":\"userOps\",\"type\":\"tuple[]\"},{\"internalType\":\"contract IAggregator\",\"name\":\"aggregator\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"internalType\":\"struct IEntryPoint.UserOpsPerAggregator[]\",\"name\":\"opsPerAggregator\",\"type\":\"tuple[]\"},{\"internalType\":\"address payable\",\"name\":\"beneficiary\",\"type\":\"address\"}],\"name\":\"handleAggregatedOps\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"initCode\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"callData\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"verificationGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"preVerificationGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxFeePerGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxPriorityFeePerGas\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"paymasterAndData\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"internalType\":\"struct UserOperation[]\",\"name\":\"ops\",\"type\":\"tuple[]\"},{\"internalType\":\"address payable\",\"name\":\"beneficiary\",\"type\":\"address\"}],\"name\":\"handleOps\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint192\",\"name\":\"key\",\"type\":\"uint192\"}],\"name\":\"incrementNonce\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"callData\",\"type\":\"bytes\"},{\"components\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"verificationGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"preVerificationGas\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"paymaster\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"maxFeePerGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxPriorityFeePerGas\",\"type\":\"uint256\"}],\"internalType\":\"struct EntryPoint.MemoryUserOp\",\"name\":\"mUserOp\",\"type\":\"tuple\"},{\"internalType\":\"bytes32\",\"name\":\"userOpHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"prefund\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"contextOffset\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"preOpGas\",\"type\":\"uint256\"}],\"internalType\":\"struct EntryPoint.UserOpInfo\",\"name\":\"opInfo\",\"type\":\"tuple\"},{\"internalType\":\"bytes\",\"name\":\"context\",\"type\":\"bytes\"}],\"name\":\"innerHandleOp\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"actualGasCost\",\"type\":\"uint256\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint192\",\"name\":\"\",\"type\":\"uint192\"}],\"name\":\"nonceSequenceNumber\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"initCode\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"callData\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"verificationGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"preVerificationGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxFeePerGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxPriorityFeePerGas\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"paymasterAndData\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"internalType\":\"struct UserOperation\",\"name\":\"op\",\"type\":\"tuple\"},{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"targetCallData\",\"type\":\"bytes\"}],\"name\":\"simulateHandleOp\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"nonce\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"initCode\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"callData\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"callGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"verificationGasLimit\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"preVerificationGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxFeePerGas\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"maxPriorityFeePerGas\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"paymasterAndData\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"internalType\":\"struct UserOperation\",\"name\":\"userOp\",\"type\":\"tuple\"}],\"name\":\"simulateValidation\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"unlockStake\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address payable\",\"name\":\"withdrawAddress\",\"type\":\"address\"}],\"name\":\"withdrawStake\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address payable\",\"name\":\"withdrawAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"withdrawAmount\",\"type\":\"uint256\"}],\"name\":\"withdrawTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]"
-                );
-                factoryContract = await ThirdwebContract.Create(
-                    personalWallet.Client,
-                    factoryAddress,
-                    chainId,
-                    "[{\"type\": \"constructor\",\"name\": \"\",\"inputs\": [{\"type\": \"address\",\"name\": \"_defaultAdmin\",\"internalType\": \"address\"},{\"type\": \"address\",\"name\": \"_entrypoint\",\"internalType\": \"contract IEntryPoint\"},{\"type\": \"tuple[]\",\"name\": \"_defaultExtensions\",\"components\": [{\"type\": \"tuple\",\"name\": \"metadata\",\"components\": [{\"internalType\": \"string\",\"name\": \"name\",\"type\": \"string\"},{\"internalType\": \"string\",\"name\": \"metadataURI\",\"type\": \"string\"},{\"internalType\": \"address\",\"name\": \"implementation\",\"type\": \"address\"}],\"internalType\": \"struct IExtension.ExtensionMetadata\"},{\"type\": \"tuple[]\",\"name\": \"functions\",\"components\": [{\"internalType\": \"bytes4\",\"name\": \"functionSelector\",\"type\": \"bytes4\"},{\"internalType\": \"string\",\"name\": \"functionSignature\",\"type\": \"string\"}],\"internalType\": \"struct IExtension.ExtensionFunction[]\"}],\"internalType\": \"struct IExtension.Extension[]\"}],\"outputs\": [],\"stateMutability\": \"nonpayable\"},{\"type\": \"error\",\"name\": \"InvalidCodeAtRange\",\"inputs\": [{\"type\": \"uint256\",\"name\": \"_size\",\"internalType\": \"uint256\"},{\"type\": \"uint256\",\"name\": \"_start\",\"internalType\": \"uint256\"},{\"type\": \"uint256\",\"name\": \"_end\",\"internalType\": \"uint256\"}],\"outputs\": []},{\"type\": \"error\",\"name\": \"WriteError\",\"inputs\": [],\"outputs\": []},{\"type\": \"event\",\"name\": \"AccountCreated\",\"inputs\": [{\"type\": \"address\",\"name\": \"account\",\"indexed\": true,\"internalType\": \"address\"},{\"type\": \"address\",\"name\": \"accountAdmin\",\"indexed\": true,\"internalType\": \"address\"}],\"outputs\": [],\"anonymous\": false},{\"type\": \"event\",\"name\": \"ContractURIUpdated\",\"inputs\": [{\"type\": \"string\",\"name\": \"prevURI\",\"indexed\": false,\"internalType\": \"string\"},{\"type\": \"string\",\"name\": \"newURI\",\"indexed\": false,\"internalType\": \"string\"}],\"outputs\": [],\"anonymous\": false},{\"type\": \"event\",\"name\": \"ExtensionAdded\",\"inputs\": [{\"type\": \"string\",\"name\": \"name\",\"indexed\": true,\"internalType\": \"string\"},{\"type\": \"address\",\"name\": \"implementation\",\"indexed\": true,\"internalType\": \"address\"},{\"type\": \"tuple\",\"name\": \"extension\",\"components\": [{\"type\": \"tuple\",\"name\": \"metadata\",\"components\": [{\"internalType\": \"string\",\"name\": \"name\",\"type\": \"string\"},{\"internalType\": \"string\",\"name\": \"metadataURI\",\"type\": \"string\"},{\"internalType\": \"address\",\"name\": \"implementation\",\"type\": \"address\"}],\"internalType\": \"struct IExtension.ExtensionMetadata\"},{\"type\": \"tuple[]\",\"name\": \"functions\",\"components\": [{\"internalType\": \"bytes4\",\"name\": \"functionSelector\",\"type\": \"bytes4\"},{\"internalType\": \"string\",\"name\": \"functionSignature\",\"type\": \"string\"}],\"internalType\": \"struct IExtension.ExtensionFunction[]\"}],\"indexed\": false,\"internalType\": \"struct IExtension.Extension\"}],\"outputs\": [],\"anonymous\": false},{\"type\": \"event\",\"name\": \"ExtensionRemoved\",\"inputs\": [{\"type\": \"string\",\"name\": \"name\",\"indexed\": true,\"internalType\": \"string\"},{\"type\": \"tuple\",\"name\": \"extension\",\"components\": [{\"type\": \"tuple\",\"name\": \"metadata\",\"components\": [{\"internalType\": \"string\",\"name\": \"name\",\"type\": \"string\"},{\"internalType\": \"string\",\"name\": \"metadataURI\",\"type\": \"string\"},{\"internalType\": \"address\",\"name\": \"implementation\",\"type\": \"address\"}],\"internalType\": \"struct IExtension.ExtensionMetadata\"},{\"type\": \"tuple[]\",\"name\": \"functions\",\"components\": [{\"internalType\": \"bytes4\",\"name\": \"functionSelector\",\"type\": \"bytes4\"},{\"internalType\": \"string\",\"name\": \"functionSignature\",\"type\": \"string\"}],\"internalType\": \"struct IExtension.ExtensionFunction[]\"}],\"indexed\": false,\"internalType\": \"struct IExtension.Extension\"}],\"outputs\": [],\"anonymous\": false},{\"type\": \"event\",\"name\": \"ExtensionReplaced\",\"inputs\": [{\"type\": \"string\",\"name\": \"name\",\"indexed\": true,\"internalType\": \"string\"},{\"type\": \"address\",\"name\": \"implementation\",\"indexed\": true,\"internalType\": \"address\"},{\"type\": \"tuple\",\"name\": \"extension\",\"components\": [{\"type\": \"tuple\",\"name\": \"metadata\",\"components\": [{\"internalType\": \"string\",\"name\": \"name\",\"type\": \"string\"},{\"internalType\": \"string\",\"name\": \"metadataURI\",\"type\": \"string\"},{\"internalType\": \"address\",\"name\": \"implementation\",\"type\": \"address\"}],\"internalType\": \"struct IExtension.ExtensionMetadata\"},{\"type\": \"tuple[]\",\"name\": \"functions\",\"components\": [{\"internalType\": \"bytes4\",\"name\": \"functionSelector\",\"type\": \"bytes4\"},{\"internalType\": \"string\",\"name\": \"functionSignature\",\"type\": \"string\"}],\"internalType\": \"struct IExtension.ExtensionFunction[]\"}],\"indexed\": false,\"internalType\": \"struct IExtension.Extension\"}],\"outputs\": [],\"anonymous\": false},{\"type\": \"event\",\"name\": \"FunctionDisabled\",\"inputs\": [{\"type\": \"string\",\"name\": \"name\",\"indexed\": true,\"internalType\": \"string\"},{\"type\": \"bytes4\",\"name\": \"functionSelector\",\"indexed\": true,\"internalType\": \"bytes4\"},{\"type\": \"tuple\",\"name\": \"extMetadata\",\"components\": [{\"type\": \"string\",\"name\": \"name\",\"internalType\": \"string\"},{\"type\": \"string\",\"name\": \"metadataURI\",\"internalType\": \"string\"},{\"type\": \"address\",\"name\": \"implementation\",\"internalType\": \"address\"}],\"indexed\": false,\"internalType\": \"struct IExtension.ExtensionMetadata\"}],\"outputs\": [],\"anonymous\": false},{\"type\": \"event\",\"name\": \"FunctionEnabled\",\"inputs\": [{\"type\": \"string\",\"name\": \"name\",\"indexed\": true,\"internalType\": \"string\"},{\"type\": \"bytes4\",\"name\": \"functionSelector\",\"indexed\": true,\"internalType\": \"bytes4\"},{\"type\": \"tuple\",\"name\": \"extFunction\",\"components\": [{\"type\": \"bytes4\",\"name\": \"functionSelector\",\"internalType\": \"bytes4\"},{\"type\": \"string\",\"name\": \"functionSignature\",\"internalType\": \"string\"}],\"indexed\": false,\"internalType\": \"struct IExtension.ExtensionFunction\"},{\"type\": \"tuple\",\"name\": \"extMetadata\",\"components\": [{\"type\": \"string\",\"name\": \"name\",\"internalType\": \"string\"},{\"type\": \"string\",\"name\": \"metadataURI\",\"internalType\": \"string\"},{\"type\": \"address\",\"name\": \"implementation\",\"internalType\": \"address\"}],\"indexed\": false,\"internalType\": \"struct IExtension.ExtensionMetadata\"}],\"outputs\": [],\"anonymous\": false},{\"type\": \"event\",\"name\": \"RoleAdminChanged\",\"inputs\": [{\"type\": \"bytes32\",\"name\": \"role\",\"indexed\": true,\"internalType\": \"bytes32\"},{\"type\": \"bytes32\",\"name\": \"previousAdminRole\",\"indexed\": true,\"internalType\": \"bytes32\"},{\"type\": \"bytes32\",\"name\": \"newAdminRole\",\"indexed\": true,\"internalType\": \"bytes32\"}],\"outputs\": [],\"anonymous\": false},{\"type\": \"event\",\"name\": \"RoleGranted\",\"inputs\": [{\"type\": \"bytes32\",\"name\": \"role\",\"indexed\": true,\"internalType\": \"bytes32\"},{\"type\": \"address\",\"name\": \"account\",\"indexed\": true,\"internalType\": \"address\"},{\"type\": \"address\",\"name\": \"sender\",\"indexed\": true,\"internalType\": \"address\"}],\"outputs\": [],\"anonymous\": false},{\"type\": \"event\",\"name\": \"RoleRevoked\",\"inputs\": [{\"type\": \"bytes32\",\"name\": \"role\",\"indexed\": true,\"internalType\": \"bytes32\"},{\"type\": \"address\",\"name\": \"account\",\"indexed\": true,\"internalType\": \"address\"},{\"type\": \"address\",\"name\": \"sender\",\"indexed\": true,\"internalType\": \"address\"}],\"outputs\": [],\"anonymous\": false},{\"type\": \"event\",\"name\": \"SignerAdded\",\"inputs\": [{\"type\": \"address\",\"name\": \"account\",\"indexed\": true,\"internalType\": \"address\"},{\"type\": \"address\",\"name\": \"signer\",\"indexed\": true,\"internalType\": \"address\"}],\"outputs\": [],\"anonymous\": false},{\"type\": \"event\",\"name\": \"SignerRemoved\",\"inputs\": [{\"type\": \"address\",\"name\": \"account\",\"indexed\": true,\"internalType\": \"address\"},{\"type\": \"address\",\"name\": \"signer\",\"indexed\": true,\"internalType\": \"address\"}],\"outputs\": [],\"anonymous\": false},{\"type\": \"fallback\",\"name\": \"\",\"inputs\": [],\"outputs\": [],\"stateMutability\": \"payable\"},{\"type\": \"function\",\"name\": \"DEFAULT_ADMIN_ROLE\",\"inputs\": [],\"outputs\": [{\"type\": \"bytes32\",\"name\": \"\",\"internalType\": \"bytes32\"}],\"stateMutability\": \"view\"},{\"type\": \"function\",\"name\": \"_disableFunctionInExtension\",\"inputs\": [{\"type\": \"string\",\"name\": \"_extensionName\",\"internalType\": \"string\"},{\"type\": \"bytes4\",\"name\": \"_functionSelector\",\"internalType\": \"bytes4\"}],\"outputs\": [],\"stateMutability\": \"nonpayable\"},{\"type\": \"function\",\"name\": \"accountImplementation\",\"inputs\": [],\"outputs\": [{\"type\": \"address\",\"name\": \"\",\"internalType\": \"address\"}],\"stateMutability\": \"view\"},{\"type\": \"function\",\"name\": \"addExtension\",\"inputs\": [{\"type\": \"tuple\",\"name\": \"_extension\",\"components\": [{\"type\": \"tuple\",\"name\": \"metadata\",\"components\": [{\"internalType\": \"string\",\"name\": \"name\",\"type\": \"string\"},{\"internalType\": \"string\",\"name\": \"metadataURI\",\"type\": \"string\"},{\"internalType\": \"address\",\"name\": \"implementation\",\"type\": \"address\"}],\"internalType\": \"struct IExtension.ExtensionMetadata\"},{\"type\": \"tuple[]\",\"name\": \"functions\",\"components\": [{\"internalType\": \"bytes4\",\"name\": \"functionSelector\",\"type\": \"bytes4\"},{\"internalType\": \"string\",\"name\": \"functionSignature\",\"type\": \"string\"}],\"internalType\": \"struct IExtension.ExtensionFunction[]\"}],\"internalType\": \"struct IExtension.Extension\"}],\"outputs\": [],\"stateMutability\": \"nonpayable\"},{\"type\": \"function\",\"name\": \"contractURI\",\"inputs\": [],\"outputs\": [{\"type\": \"string\",\"name\": \"\",\"internalType\": \"string\"}],\"stateMutability\": \"view\"},{\"type\": \"function\",\"name\": \"createAccount\",\"inputs\": [{\"type\": \"address\",\"name\": \"_admin\",\"internalType\": \"address\"},{\"type\": \"bytes\",\"name\": \"_data\",\"internalType\": \"bytes\"}],\"outputs\": [{\"type\": \"address\",\"name\": \"\",\"internalType\": \"address\"}],\"stateMutability\": \"nonpayable\"},{\"type\": \"function\",\"name\": \"defaultExtensions\",\"inputs\": [],\"outputs\": [{\"type\": \"address\",\"name\": \"\",\"internalType\": \"address\"}],\"stateMutability\": \"view\"},{\"type\": \"function\",\"name\": \"disableFunctionInExtension\",\"inputs\": [{\"type\": \"string\",\"name\": \"_extensionName\",\"internalType\": \"string\"},{\"type\": \"bytes4\",\"name\": \"_functionSelector\",\"internalType\": \"bytes4\"}],\"outputs\": [],\"stateMutability\": \"nonpayable\"},{\"type\": \"function\",\"name\": \"enableFunctionInExtension\",\"inputs\": [{\"type\": \"string\",\"name\": \"_extensionName\",\"internalType\": \"string\"},{\"type\": \"tuple\",\"name\": \"_function\",\"components\": [{\"type\": \"bytes4\",\"name\": \"functionSelector\",\"internalType\": \"bytes4\"},{\"type\": \"string\",\"name\": \"functionSignature\",\"internalType\": \"string\"}],\"internalType\": \"struct IExtension.ExtensionFunction\"}],\"outputs\": [],\"stateMutability\": \"nonpayable\"},{\"type\": \"function\",\"name\": \"entrypoint\",\"inputs\": [],\"outputs\": [{\"type\": \"address\",\"name\": \"\",\"internalType\": \"address\"}],\"stateMutability\": \"view\"},{\"type\": \"function\",\"name\": \"getAccounts\",\"inputs\": [{\"type\": \"uint256\",\"name\": \"_start\",\"internalType\": \"uint256\"},{\"type\": \"uint256\",\"name\": \"_end\",\"internalType\": \"uint256\"}],\"outputs\": [{\"type\": \"address[]\",\"name\": \"accounts\",\"internalType\": \"address[]\"}],\"stateMutability\": \"view\"},{\"type\": \"function\",\"name\": \"getAccountsOfSigner\",\"inputs\": [{\"type\": \"address\",\"name\": \"signer\",\"internalType\": \"address\"}],\"outputs\": [{\"type\": \"address[]\",\"name\": \"accounts\",\"internalType\": \"address[]\"}],\"stateMutability\": \"view\"},{\"type\": \"function\",\"name\": \"getAddress\",\"inputs\": [{\"type\": \"address\",\"name\": \"_adminSigner\",\"internalType\": \"address\"},{\"type\": \"bytes\",\"name\": \"_data\",\"internalType\": \"bytes\"}],\"outputs\": [{\"type\": \"address\",\"name\": \"\",\"internalType\": \"address\"}],\"stateMutability\": \"view\"},{\"type\": \"function\",\"name\": \"getAllAccounts\",\"inputs\": [],\"outputs\": [{\"type\": \"address[]\",\"name\": \"\",\"internalType\": \"address[]\"}],\"stateMutability\": \"view\"},{\"type\": \"function\",\"name\": \"getAllExtensions\",\"inputs\": [],\"outputs\": [{\"type\": \"tuple[]\",\"name\": \"allExtensions\",\"components\": [{\"type\": \"tuple\",\"name\": \"metadata\",\"components\": [{\"internalType\": \"string\",\"name\": \"name\",\"type\": \"string\"},{\"internalType\": \"string\",\"name\": \"metadataURI\",\"type\": \"string\"},{\"internalType\": \"address\",\"name\": \"implementation\",\"type\": \"address\"}],\"internalType\": \"struct IExtension.ExtensionMetadata\"},{\"type\": \"tuple[]\",\"name\": \"functions\",\"components\": [{\"internalType\": \"bytes4\",\"name\": \"functionSelector\",\"type\": \"bytes4\"},{\"internalType\": \"string\",\"name\": \"functionSignature\",\"type\": \"string\"}],\"internalType\": \"struct IExtension.ExtensionFunction[]\"}],\"internalType\": \"struct IExtension.Extension[]\"}],\"stateMutability\": \"view\"},{\"type\": \"function\",\"name\": \"getExtension\",\"inputs\": [{\"type\": \"string\",\"name\": \"extensionName\",\"internalType\": \"string\"}],\"outputs\": [{\"type\": \"tuple\",\"name\": \"\",\"components\": [{\"type\": \"tuple\",\"name\": \"metadata\",\"components\": [{\"internalType\": \"string\",\"name\": \"name\",\"type\": \"string\"},{\"internalType\": \"string\",\"name\": \"metadataURI\",\"type\": \"string\"},{\"internalType\": \"address\",\"name\": \"implementation\",\"type\": \"address\"}],\"internalType\": \"struct IExtension.ExtensionMetadata\"},{\"type\": \"tuple[]\",\"name\": \"functions\",\"components\": [{\"internalType\": \"bytes4\",\"name\": \"functionSelector\",\"type\": \"bytes4\"},{\"internalType\": \"string\",\"name\": \"functionSignature\",\"type\": \"string\"}],\"internalType\": \"struct IExtension.ExtensionFunction[]\"}],\"internalType\": \"struct IExtension.Extension\"}],\"stateMutability\": \"view\"},{\"type\": \"function\",\"name\": \"getImplementationForFunction\",\"inputs\": [{\"type\": \"bytes4\",\"name\": \"_functionSelector\",\"internalType\": \"bytes4\"}],\"outputs\": [{\"type\": \"address\",\"name\": \"\",\"internalType\": \"address\"}],\"stateMutability\": \"view\"},{\"type\": \"function\",\"name\": \"getMetadataForFunction\",\"inputs\": [{\"type\": \"bytes4\",\"name\": \"functionSelector\",\"internalType\": \"bytes4\"}],\"outputs\": [{\"type\": \"tuple\",\"name\": \"\",\"components\": [{\"type\": \"string\",\"name\": \"name\",\"internalType\": \"string\"},{\"type\": \"string\",\"name\": \"metadataURI\",\"internalType\": \"string\"},{\"type\": \"address\",\"name\": \"implementation\",\"internalType\": \"address\"}],\"internalType\": \"struct IExtension.ExtensionMetadata\"}],\"stateMutability\": \"view\"},{\"type\": \"function\",\"name\": \"getRoleAdmin\",\"inputs\": [{\"type\": \"bytes32\",\"name\": \"role\",\"internalType\": \"bytes32\"}],\"outputs\": [{\"type\": \"bytes32\",\"name\": \"\",\"internalType\": \"bytes32\"}],\"stateMutability\": \"view\"},{\"type\": \"function\",\"name\": \"getRoleMember\",\"inputs\": [{\"type\": \"bytes32\",\"name\": \"role\",\"internalType\": \"bytes32\"},{\"type\": \"uint256\",\"name\": \"index\",\"internalType\": \"uint256\"}],\"outputs\": [{\"type\": \"address\",\"name\": \"member\",\"internalType\": \"address\"}],\"stateMutability\": \"view\"},{\"type\": \"function\",\"name\": \"getRoleMemberCount\",\"inputs\": [{\"type\": \"bytes32\",\"name\": \"role\",\"internalType\": \"bytes32\"}],\"outputs\": [{\"type\": \"uint256\",\"name\": \"count\",\"internalType\": \"uint256\"}],\"stateMutability\": \"view\"},{\"type\": \"function\",\"name\": \"grantRole\",\"inputs\": [{\"type\": \"bytes32\",\"name\": \"role\",\"internalType\": \"bytes32\"},{\"type\": \"address\",\"name\": \"account\",\"internalType\": \"address\"}],\"outputs\": [],\"stateMutability\": \"nonpayable\"},{\"type\": \"function\",\"name\": \"hasRole\",\"inputs\": [{\"type\": \"bytes32\",\"name\": \"role\",\"internalType\": \"bytes32\"},{\"type\": \"address\",\"name\": \"account\",\"internalType\": \"address\"}],\"outputs\": [{\"type\": \"bool\",\"name\": \"\",\"internalType\": \"bool\"}],\"stateMutability\": \"view\"},{\"type\": \"function\",\"name\": \"hasRoleWithSwitch\",\"inputs\": [{\"type\": \"bytes32\",\"name\": \"role\",\"internalType\": \"bytes32\"},{\"type\": \"address\",\"name\": \"account\",\"internalType\": \"address\"}],\"outputs\": [{\"type\": \"bool\",\"name\": \"\",\"internalType\": \"bool\"}],\"stateMutability\": \"view\"},{\"type\": \"function\",\"name\": \"isRegistered\",\"inputs\": [{\"type\": \"address\",\"name\": \"_account\",\"internalType\": \"address\"}],\"outputs\": [{\"type\": \"bool\",\"name\": \"\",\"internalType\": \"bool\"}],\"stateMutability\": \"view\"},{\"type\": \"function\",\"name\": \"multicall\",\"inputs\": [{\"type\": \"bytes[]\",\"name\": \"data\",\"internalType\": \"bytes[]\"}],\"outputs\": [{\"type\": \"bytes[]\",\"name\": \"results\",\"internalType\": \"bytes[]\"}],\"stateMutability\": \"nonpayable\"},{\"type\": \"function\",\"name\": \"onRegister\",\"inputs\": [{\"type\": \"bytes32\",\"name\": \"_salt\",\"internalType\": \"bytes32\"}],\"outputs\": [],\"stateMutability\": \"nonpayable\"},{\"type\": \"function\",\"name\": \"onSignerAdded\",\"inputs\": [{\"type\": \"address\",\"name\": \"_signer\",\"internalType\": \"address\"},{\"type\": \"bytes32\",\"name\": \"_salt\",\"internalType\": \"bytes32\"}],\"outputs\": [],\"stateMutability\": \"nonpayable\"},{\"type\": \"function\",\"name\": \"onSignerRemoved\",\"inputs\": [{\"type\": \"address\",\"name\": \"_signer\",\"internalType\": \"address\"},{\"type\": \"bytes32\",\"name\": \"_salt\",\"internalType\": \"bytes32\"}],\"outputs\": [],\"stateMutability\": \"nonpayable\"},{\"type\": \"function\",\"name\": \"removeExtension\",\"inputs\": [{\"type\": \"string\",\"name\": \"_extensionName\",\"internalType\": \"string\"}],\"outputs\": [],\"stateMutability\": \"nonpayable\"},{\"type\": \"function\",\"name\": \"renounceRole\",\"inputs\": [{\"type\": \"bytes32\",\"name\": \"role\",\"internalType\": \"bytes32\"},{\"type\": \"address\",\"name\": \"account\",\"internalType\": \"address\"}],\"outputs\": [],\"stateMutability\": \"nonpayable\"},{\"type\": \"function\",\"name\": \"replaceExtension\",\"inputs\": [{\"type\": \"tuple\",\"name\": \"_extension\",\"components\": [{\"type\": \"tuple\",\"name\": \"metadata\",\"components\": [{\"internalType\": \"string\",\"name\": \"name\",\"type\": \"string\"},{\"internalType\": \"string\",\"name\": \"metadataURI\",\"type\": \"string\"},{\"internalType\": \"address\",\"name\": \"implementation\",\"type\": \"address\"}],\"internalType\": \"struct IExtension.ExtensionMetadata\"},{\"type\": \"tuple[]\",\"name\": \"functions\",\"components\": [{\"internalType\": \"bytes4\",\"name\": \"functionSelector\",\"type\": \"bytes4\"},{\"internalType\": \"string\",\"name\": \"functionSignature\",\"type\": \"string\"}],\"internalType\": \"struct IExtension.ExtensionFunction[]\"}],\"internalType\": \"struct IExtension.Extension\"}],\"outputs\": [],\"stateMutability\": \"nonpayable\"},{\"type\": \"function\",\"name\": \"revokeRole\",\"inputs\": [{\"type\": \"bytes32\",\"name\": \"role\",\"internalType\": \"bytes32\"},{\"type\": \"address\",\"name\": \"account\",\"internalType\": \"address\"}],\"outputs\": [],\"stateMutability\": \"nonpayable\"},{\"type\": \"function\",\"name\": \"setContractURI\",\"inputs\": [{\"type\": \"string\",\"name\": \"_uri\",\"internalType\": \"string\"}],\"outputs\": [],\"stateMutability\": \"nonpayable\"},{\"type\": \"function\",\"name\": \"totalAccounts\",\"inputs\": [],\"outputs\": [{\"type\": \"uint256\",\"name\": \"\",\"internalType\": \"uint256\"}],\"stateMutability\": \"view\"}]"
-                );
-                var accountAddress = accountAddressOverride ?? await ThirdwebContract.Read<string>(factoryContract, "getAddress", await personalWallet.GetAddress(), new byte[0]);
-                accountContract = await ThirdwebContract.Create(
-                    personalWallet.Client,
-                    accountAddress,
-                    chainId,
-                    "[{type: \"constructor\",inputs: [{name: \"_entrypoint\",type: \"address\",internalType: \"contract IEntryPoint\",},{ name: \"_factory\", type: \"address\", internalType: \"address\" },],stateMutability: \"nonpayable\",},{ type: \"receive\", stateMutability: \"payable\" },{type: \"function\",name: \"addDeposit\",inputs: [],outputs: [],stateMutability: \"payable\",},{type: \"function\",name: \"contractURI\",inputs: [],outputs: [{ name: \"\", type: \"string\", internalType: \"string\" }],stateMutability: \"view\",},{type: \"function\",name: \"entryPoint\",inputs: [],outputs: [{ name: \"\", type: \"address\", internalType: \"contract IEntryPoint\" },],stateMutability: \"view\",},{type: \"function\",name: \"execute\",inputs: [{ name: \"_target\", type: \"address\", internalType: \"address\" },{ name: \"_value\", type: \"uint256\", internalType: \"uint256\" },{ name: \"_calldata\", type: \"bytes\", internalType: \"bytes\" },],outputs: [],stateMutability: \"nonpayable\",},{type: \"function\",name: \"executeBatch\",inputs: [{ name: \"_target\", type: \"address[]\", internalType: \"address[]\" },{ name: \"_value\", type: \"uint256[]\", internalType: \"uint256[]\" },{ name: \"_calldata\", type: \"bytes[]\", internalType: \"bytes[]\" },],outputs: [],stateMutability: \"nonpayable\",},{type: \"function\",name: \"factory\",inputs: [],outputs: [{ name: \"\", type: \"address\", internalType: \"address\" }],stateMutability: \"view\",},{type: \"function\",name: \"getAllActiveSigners\",inputs: [],outputs: [{name: \"signers\",type: \"tuple[]\",internalType: \"struct IAccountPermissions.SignerPermissions[]\",components: [{ name: \"signer\", type: \"address\", internalType: \"address\" },{name: \"approvedTargets\",type: \"address[]\",internalType: \"address[]\",},{name: \"nativeTokenLimitPerTransaction\",type: \"uint256\",internalType: \"uint256\",},{ name: \"startTimestamp\", type: \"uint128\", internalType: \"uint128\" },{ name: \"endTimestamp\", type: \"uint128\", internalType: \"uint128\" },],},],stateMutability: \"view\",},{type: \"function\",name: \"getAllAdmins\",inputs: [],outputs: [{ name: \"\", type: \"address[]\", internalType: \"address[]\" }],stateMutability: \"view\",},{type: \"function\",name: \"getAllSigners\",inputs: [],outputs: [{name: \"signers\",type: \"tuple[]\",internalType: \"struct IAccountPermissions.SignerPermissions[]\",components: [{ name: \"signer\", type: \"address\", internalType: \"address\" },{name: \"approvedTargets\",type: \"address[]\",internalType: \"address[]\",},{name: \"nativeTokenLimitPerTransaction\",type: \"uint256\",internalType: \"uint256\",},{ name: \"startTimestamp\", type: \"uint128\", internalType: \"uint128\" },{ name: \"endTimestamp\", type: \"uint128\", internalType: \"uint128\" },],},],stateMutability: \"view\",},{type: \"function\",name: \"getMessageHash\",inputs: [{ name: \"_hash\", type: \"bytes32\", internalType: \"bytes32\" }],outputs: [{ name: \"\", type: \"bytes32\", internalType: \"bytes32\" }],stateMutability: \"view\",},{type: \"function\",name: \"getNonce\",inputs: [],outputs: [{ name: \"\", type: \"uint256\", internalType: \"uint256\" }],stateMutability: \"view\",},{type: \"function\",name: \"getPermissionsForSigner\",inputs: [{ name: \"signer\", type: \"address\", internalType: \"address\" }],outputs: [{name: \"\",type: \"tuple\",internalType: \"struct IAccountPermissions.SignerPermissions\",components: [{ name: \"signer\", type: \"address\", internalType: \"address\" },{name: \"approvedTargets\",type: \"address[]\",internalType: \"address[]\",},{name: \"nativeTokenLimitPerTransaction\",type: \"uint256\",internalType: \"uint256\",},{ name: \"startTimestamp\", type: \"uint128\", internalType: \"uint128\" },{ name: \"endTimestamp\", type: \"uint128\", internalType: \"uint128\" },],},],stateMutability: \"view\",},{type: \"function\",name: \"initialize\",inputs: [{ name: \"_defaultAdmin\", type: \"address\", internalType: \"address\" },{ name: \"_data\", type: \"bytes\", internalType: \"bytes\" },],outputs: [],stateMutability: \"nonpayable\",},{type: \"function\",name: \"isActiveSigner\",inputs: [{ name: \"signer\", type: \"address\", internalType: \"address\" }],outputs: [{ name: \"\", type: \"bool\", internalType: \"bool\" }],stateMutability: \"view\",},{type: \"function\",name: \"isAdmin\",inputs: [{ name: \"_account\", type: \"address\", internalType: \"address\" }],outputs: [{ name: \"\", type: \"bool\", internalType: \"bool\" }],stateMutability: \"view\",},{type: \"function\",name: \"isValidSignature\",inputs: [{ name: \"_hash\", type: \"bytes32\", internalType: \"bytes32\" },{ name: \"_signature\", type: \"bytes\", internalType: \"bytes\" },],outputs: [{ name: \"magicValue\", type: \"bytes4\", internalType: \"bytes4\" }],stateMutability: \"view\",},{type: \"function\",name: \"isValidSigner\",inputs: [{ name: \"_signer\", type: \"address\", internalType: \"address\" },{name: \"_userOp\",type: \"tuple\",internalType: \"struct UserOperation\",components: [{ name: \"sender\", type: \"address\", internalType: \"address\" },{ name: \"nonce\", type: \"uint256\", internalType: \"uint256\" },{ name: \"initCode\", type: \"bytes\", internalType: \"bytes\" },{ name: \"callData\", type: \"bytes\", internalType: \"bytes\" },{ name: \"callGasLimit\", type: \"uint256\", internalType: \"uint256\" },{name: \"verificationGasLimit\",type: \"uint256\",internalType: \"uint256\",},{name: \"preVerificationGas\",type: \"uint256\",internalType: \"uint256\",},{ name: \"maxFeePerGas\", type: \"uint256\", internalType: \"uint256\" },{name: \"maxPriorityFeePerGas\",type: \"uint256\",internalType: \"uint256\",},{ name: \"paymasterAndData\", type: \"bytes\", internalType: \"bytes\" },{ name: \"signature\", type: \"bytes\", internalType: \"bytes\" },],},],outputs: [{ name: \"\", type: \"bool\", internalType: \"bool\" }],stateMutability: \"view\",},{type: \"function\",name: \"multicall\",inputs: [{ name: \"data\", type: \"bytes[]\", internalType: \"bytes[]\" }],outputs: [{ name: \"results\", type: \"bytes[]\", internalType: \"bytes[]\" }],stateMutability: \"nonpayable\",},{type: \"function\",name: \"onERC1155BatchReceived\",inputs: [{ name: \"\", type: \"address\", internalType: \"address\" },{ name: \"\", type: \"address\", internalType: \"address\" },{ name: \"\", type: \"uint256[]\", internalType: \"uint256[]\" },{ name: \"\", type: \"uint256[]\", internalType: \"uint256[]\" },{ name: \"\", type: \"bytes\", internalType: \"bytes\" },],outputs: [{ name: \"\", type: \"bytes4\", internalType: \"bytes4\" }],stateMutability: \"nonpayable\",},{type: \"function\",name: \"onERC1155Received\",inputs: [{ name: \"\", type: \"address\", internalType: \"address\" },{ name: \"\", type: \"address\", internalType: \"address\" },{ name: \"\", type: \"uint256\", internalType: \"uint256\" },{ name: \"\", type: \"uint256\", internalType: \"uint256\" },{ name: \"\", type: \"bytes\", internalType: \"bytes\" },],outputs: [{ name: \"\", type: \"bytes4\", internalType: \"bytes4\" }],stateMutability: \"nonpayable\",},{type: \"function\",name: \"onERC721Received\",inputs: [{ name: \"\", type: \"address\", internalType: \"address\" },{ name: \"\", type: \"address\", internalType: \"address\" },{ name: \"\", type: \"uint256\", internalType: \"uint256\" },{ name: \"\", type: \"bytes\", internalType: \"bytes\" },],outputs: [{ name: \"\", type: \"bytes4\", internalType: \"bytes4\" }],stateMutability: \"nonpayable\",},{type: \"function\",name: \"setContractURI\",inputs: [{ name: \"_uri\", type: \"string\", internalType: \"string\" }],outputs: [],stateMutability: \"nonpayable\",},{type: \"function\",name: \"setEntrypointOverride\",inputs: [{name: \"_entrypointOverride\",type: \"address\",internalType: \"contract IEntryPoint\",},],outputs: [],stateMutability: \"nonpayable\",},{type: \"function\",name: \"setPermissionsForSigner\",inputs: [{name: \"_req\",type: \"tuple\",internalType: \"struct IAccountPermissions.SignerPermissionRequest\",components: [{ name: \"signer\", type: \"address\", internalType: \"address\" },{ name: \"isAdmin\", type: \"uint8\", internalType: \"uint8\" },{name: \"approvedTargets\",type: \"address[]\",internalType: \"address[]\",},{name: \"nativeTokenLimitPerTransaction\",type: \"uint256\",internalType: \"uint256\",},{name: \"permissionStartTimestamp\",type: \"uint128\",internalType: \"uint128\",},{name: \"permissionEndTimestamp\",type: \"uint128\",internalType: \"uint128\",},{name: \"reqValidityStartTimestamp\",type: \"uint128\",internalType: \"uint128\",},{name: \"reqValidityEndTimestamp\",type: \"uint128\",internalType: \"uint128\",},{ name: \"uid\", type: \"bytes32\", internalType: \"bytes32\" },],},{ name: \"_signature\", type: \"bytes\", internalType: \"bytes\" },],outputs: [],stateMutability: \"nonpayable\",},{type: \"function\",name: \"supportsInterface\",inputs: [{ name: \"interfaceId\", type: \"bytes4\", internalType: \"bytes4\" }],outputs: [{ name: \"\", type: \"bool\", internalType: \"bool\" }],stateMutability: \"view\",},{type: \"function\",name: \"validateUserOp\",inputs: [{name: \"userOp\",type: \"tuple\",internalType: \"struct UserOperation\",components: [{ name: \"sender\", type: \"address\", internalType: \"address\" },{ name: \"nonce\", type: \"uint256\", internalType: \"uint256\" },{ name: \"initCode\", type: \"bytes\", internalType: \"bytes\" },{ name: \"callData\", type: \"bytes\", internalType: \"bytes\" },{ name: \"callGasLimit\", type: \"uint256\", internalType: \"uint256\" },{name: \"verificationGasLimit\",type: \"uint256\",internalType: \"uint256\",},{name: \"preVerificationGas\",type: \"uint256\",internalType: \"uint256\",},{ name: \"maxFeePerGas\", type: \"uint256\", internalType: \"uint256\" },{name: \"maxPriorityFeePerGas\",type: \"uint256\",internalType: \"uint256\",},{ name: \"paymasterAndData\", type: \"bytes\", internalType: \"bytes\" },{ name: \"signature\", type: \"bytes\", internalType: \"bytes\" },],},{ name: \"userOpHash\", type: \"bytes32\", internalType: \"bytes32\" },{ name: \"missingAccountFunds\", type: \"uint256\", internalType: \"uint256\" },],outputs: [{ name: \"validationData\", type: \"uint256\", internalType: \"uint256\" },],stateMutability: \"nonpayable\",},{type: \"function\",name: \"verifySignerPermissionRequest\",inputs: [{name: \"req\",type: \"tuple\",internalType: \"struct IAccountPermissions.SignerPermissionRequest\",components: [{ name: \"signer\", type: \"address\", internalType: \"address\" },{ name: \"isAdmin\", type: \"uint8\", internalType: \"uint8\" },{name: \"approvedTargets\",type: \"address[]\",internalType: \"address[]\",},{name: \"nativeTokenLimitPerTransaction\",type: \"uint256\",internalType: \"uint256\",},{name: \"permissionStartTimestamp\",type: \"uint128\",internalType: \"uint128\",},{name: \"permissionEndTimestamp\",type: \"uint128\",internalType: \"uint128\",},{name: \"reqValidityStartTimestamp\",type: \"uint128\",internalType: \"uint128\",},{name: \"reqValidityEndTimestamp\",type: \"uint128\",internalType: \"uint128\",},{ name: \"uid\", type: \"bytes32\", internalType: \"bytes32\" },],},{ name: \"signature\", type: \"bytes\", internalType: \"bytes\" },],outputs: [{ name: \"success\", type: \"bool\", internalType: \"bool\" },{ name: \"signer\", type: \"address\", internalType: \"address\" },],stateMutability: \"view\",},{type: \"function\",name: \"withdrawDepositTo\",inputs: [{name: \"withdrawAddress\",type: \"address\",internalType: \"address payable\",},{ name: \"amount\", type: \"uint256\", internalType: \"uint256\" },],outputs: [],stateMutability: \"nonpayable\",},{type: \"event\",name: \"AdminUpdated\",inputs: [{name: \"signer\",type: \"address\",indexed: true,internalType: \"address\",},{ name: \"isAdmin\", type: \"bool\", indexed: false, internalType: \"bool\" },],anonymous: false,},{type: \"event\",name: \"ContractURIUpdated\",inputs: [{name: \"prevURI\",type: \"string\",indexed: false,internalType: \"string\",},{name: \"newURI\",type: \"string\",indexed: false,internalType: \"string\",},],anonymous: false,},{type: \"event\",name: \"Initialized\",inputs: [{ name: \"version\", type: \"uint8\", indexed: false, internalType: \"uint8\" },],anonymous: false,},{type: \"event\",name: \"SignerPermissionsUpdated\",inputs: [{name: \"authorizingSigner\",type: \"address\",indexed: true,internalType: \"address\",},{name: \"targetSigner\",type: \"address\",indexed: true,internalType: \"address\",},{name: \"permissions\",type: \"tuple\",indexed: false,internalType: \"struct IAccountPermissions.SignerPermissionRequest\",components: [{ name: \"signer\", type: \"address\", internalType: \"address\" },{ name: \"isAdmin\", type: \"uint8\", internalType: \"uint8\" },{name: \"approvedTargets\",type: \"address[]\",internalType: \"address[]\",},{name: \"nativeTokenLimitPerTransaction\",type: \"uint256\",internalType: \"uint256\",},{name: \"permissionStartTimestamp\",type: \"uint128\",internalType: \"uint128\",},{name: \"permissionEndTimestamp\",type: \"uint128\",internalType: \"uint128\",},{name: \"reqValidityStartTimestamp\",type: \"uint128\",internalType: \"uint128\",},{name: \"reqValidityEndTimestamp\",type: \"uint128\",internalType: \"uint128\",},{ name: \"uid\", type: \"bytes32\", internalType: \"bytes32\" },],},],anonymous: false,},]"
-                );
+                var entryPointAbi = entryPointVersion == 6 ? Constants.ENTRYPOINT_V06_ABI : Constants.ENTRYPOINT_V07_ABI;
+                var factoryAbi = entryPointVersion == 6 ? Constants.FACTORY_V06_ABI : Constants.FACTORY_V07_ABI;
+                var accountAbi = entryPointVersion == 6 ? Constants.ACCOUNT_V06_ABI : Constants.ACCOUNT_V07_ABI;
+
+                entryPointContract = await ThirdwebContract.Create(personalWallet.Client, entryPoint, chainId, entryPointAbi);
+                factoryContract = await ThirdwebContract.Create(personalWallet.Client, factoryAddress, chainId, factoryAbi);
+
+                var personalAddress = await personalWallet.GetAddress();
+                var accountAddress = accountAddressOverride ?? await ThirdwebContract.Read<string>(factoryContract, "getAddress", personalAddress, new byte[0]);
+
+                accountContract = await ThirdwebContract.Create(personalWallet.Client, accountAddress, chainId, accountAbi);
             }
 
             return new SmartWallet(personalWallet, gasless, chainId, bundlerUrl, paymasterUrl, entryPointContract, factoryContract, accountContract);
@@ -175,23 +171,29 @@ namespace Thirdweb
             }
         }
 
-        private async Task<byte[]> GetInitCode()
+        private async Task<(byte[] initCode, string factory, string factoryData)> GetInitCode()
         {
             if (await IsDeployed())
             {
-                return new byte[0];
+                return (new byte[] { }, null, null);
             }
 
-            var data = new Contract(null, _factoryContract.Abi, _factoryContract.Address).GetFunction("createAccount").GetData(await _personalAccount.GetAddress(), new byte[0]);
-            data = Utils.HexConcat(_factoryContract.Address, data);
-            return data.HexToByteArray();
+            var entryPointVersion = Utils.GetEntryPointVersion(_entryPointContract.Address);
+            var personalAccountAddress = await _personalAccount.GetAddress();
+            var factoryContract = new Contract(null, _factoryContract.Abi, _factoryContract.Address);
+            var createFunction = factoryContract.GetFunction("createAccount");
+            var data =
+                entryPointVersion == 6
+                    ? createFunction.GetData(personalAccountAddress, new byte { })
+                    : createFunction.GetData(personalAccountAddress, new byte { }, Array.Empty<InitializerInstallModule>());
+            return (Utils.HexConcat(_factoryContract.Address, data).HexToBytes(), _factoryContract.Address, data);
         }
 
-        private async Task<UserOperation> SignUserOp(ThirdwebTransactionInput transactionInput, int? requestId = null, bool simulation = false)
+        private async Task<object> SignUserOp(ThirdwebTransactionInput transactionInput, int? requestId = null, bool simulation = false)
         {
             requestId ??= 1;
 
-            var initCode = await GetInitCode();
+            (var initCode, var factory, var factoryData) = await GetInitCode();
 
             // Wait until deployed to avoid double initCode
             if (!simulation)
@@ -211,63 +213,153 @@ namespace Thirdweb
 
             // Create the user operation and its safe (hexified) version
 
-            var executeFn = new ExecuteFunction
-            {
-                Target = transactionInput.To,
-                Value = transactionInput.Value.Value,
-                Calldata = transactionInput.Data.HexToByteArray(),
-                FromAddress = await GetAddress(),
-            };
-            var executeInput = executeFn.CreateTransactionInput(await GetAddress());
-
             var fees = await BundlerClient.ThirdwebGetUserOperationGasPrice(Client, _bundlerUrl, requestId);
-            var maxFee = new HexBigInteger(fees.maxFeePerGas).Value;
-            var maxPriorityFee = new HexBigInteger(fees.maxPriorityFeePerGas).Value;
+            var maxFee = new HexBigInteger(fees.MaxFeePerGas).Value;
+            var maxPriorityFee = new HexBigInteger(fees.MaxPriorityFeePerGas).Value;
 
-            var partialUserOp = new UserOperation()
+            var entryPointVersion = Utils.GetEntryPointVersion(_entryPointContract.Address);
+
+            if (entryPointVersion == 6)
             {
-                Sender = _accountContract.Address,
-                Nonce = await GetNonce(),
-                InitCode = initCode,
-                CallData = executeInput.Data.HexToByteArray(),
-                CallGasLimit = 0,
-                VerificationGasLimit = 0,
-                PreVerificationGas = 0,
-                MaxFeePerGas = maxFee,
-                MaxPriorityFeePerGas = maxPriorityFee,
-                PaymasterAndData = new byte[] { },
-                Signature = Constants.DUMMY_SIG.HexToByteArray(),
-            };
+                var executeFn = new ExecuteFunctionV6
+                {
+                    Target = transactionInput.To,
+                    Value = transactionInput.Value.Value,
+                    Calldata = transactionInput.Data.HexToBytes(),
+                    FromAddress = await GetAddress(),
+                };
+                var executeInput = executeFn.CreateTransactionInput(await GetAddress());
 
-            // Update paymaster data if any
+                var partialUserOp = new UserOperationV6()
+                {
+                    Sender = _accountContract.Address,
+                    Nonce = await GetNonce(),
+                    InitCode = initCode,
+                    CallData = executeInput.Data.HexToBytes(),
+                    CallGasLimit = 0,
+                    VerificationGasLimit = 0,
+                    PreVerificationGas = 0,
+                    MaxFeePerGas = maxFee,
+                    MaxPriorityFeePerGas = maxPriorityFee,
+                    PaymasterAndData = new byte[] { },
+                    Signature = Constants.DUMMY_SIG.HexToBytes(),
+                };
 
-            partialUserOp.PaymasterAndData = await GetPaymasterAndData(requestId, EncodeUserOperation(partialUserOp));
+                // Update paymaster data if any
 
-            // Estimate gas
+                partialUserOp.PaymasterAndData = (await GetPaymasterAndData(requestId, EncodeUserOperation(partialUserOp))).PaymasterAndData.HexToBytes();
 
-            var gasEstimates = await BundlerClient.EthEstimateUserOperationGas(Client, _bundlerUrl, requestId, EncodeUserOperation(partialUserOp), _entryPointContract.Address);
-            partialUserOp.CallGasLimit = 50000 + new HexBigInteger(gasEstimates.CallGasLimit).Value;
-            partialUserOp.VerificationGasLimit = new HexBigInteger(gasEstimates.VerificationGas).Value;
-            partialUserOp.PreVerificationGas = new HexBigInteger(gasEstimates.PreVerificationGas).Value;
+                // Estimate gas
 
-            // Update paymaster data if any
+                var gasEstimates = await BundlerClient.EthEstimateUserOperationGas(Client, _bundlerUrl, requestId, EncodeUserOperation(partialUserOp), _entryPointContract.Address);
+                partialUserOp.CallGasLimit = 50000 + new HexBigInteger(gasEstimates.CallGasLimit).Value;
+                partialUserOp.VerificationGasLimit = new HexBigInteger(gasEstimates.VerificationGasLimit).Value;
+                partialUserOp.PreVerificationGas = new HexBigInteger(gasEstimates.PreVerificationGas).Value;
 
-            partialUserOp.PaymasterAndData = await GetPaymasterAndData(requestId, EncodeUserOperation(partialUserOp));
+                // Update paymaster data if any
 
-            // Hash, sign and encode the user operation
+                partialUserOp.PaymasterAndData = (await GetPaymasterAndData(requestId, EncodeUserOperation(partialUserOp))).PaymasterAndData.HexToBytes();
 
-            partialUserOp.Signature = await HashAndSignUserOp(partialUserOp, _entryPointContract);
+                // Hash, sign and encode the user operation
 
-            return partialUserOp;
+                partialUserOp.Signature = await HashAndSignUserOp(partialUserOp, _entryPointContract);
+
+                return partialUserOp;
+            }
+            else
+            {
+                var executeFn = new ExecuteFunctionV7
+                {
+                    Mode = ModeLib.EncodeSimpleSingle().Value,
+                    ExecutionCalldata = ExecutionLib.EncodeSingle(transactionInput.To.HexToBytes(), transactionInput.Value.HexValue.HexToBytes32(), transactionInput.Data.HexToBytes())
+                };
+                var executeInput = executeFn.CreateTransactionInput(await GetAddress());
+
+                var partialUserOp = new UserOperationV7()
+                {
+                    Sender = _accountContract.Address,
+                    Nonce = await GetNonce(),
+                    Factory = factory,
+                    FactoryData = factoryData.HexToBytes(),
+                    CallData = executeInput.Data.HexToBytes(),
+                    CallGasLimit = 0,
+                    VerificationGasLimit = 0,
+                    PreVerificationGas = 0,
+                    MaxFeePerGas = maxFee,
+                    MaxPriorityFeePerGas = maxPriorityFee,
+                    Paymaster = null,
+                    PaymasterVerificationGasLimit = 0,
+                    PaymasterPostOpGasLimit = 0,
+                    PaymasterData = new byte[] { },
+                    Signature = Constants.DUMMY_SIG.HexToBytes(),
+                };
+
+                // Update paymaster data if any
+
+                var res = await GetPaymasterAndData(requestId, EncodeUserOperation(partialUserOp));
+                partialUserOp.Paymaster = res.Paymaster;
+                partialUserOp.PaymasterData = res.PaymasterData?.HexToBytes() ?? new byte[] { };
+                partialUserOp.PreVerificationGas = new HexBigInteger(res.PreVerificationGas ?? "0").Value;
+                partialUserOp.VerificationGasLimit = new HexBigInteger(res.VerificationGasLimit ?? "0").Value;
+                partialUserOp.CallGasLimit = new HexBigInteger(res.CallGasLimit ?? "0").Value;
+                partialUserOp.PaymasterVerificationGasLimit = new HexBigInteger(res.PaymasterVerificationGasLimit ?? "0").Value;
+                partialUserOp.PaymasterPostOpGasLimit = new HexBigInteger(res.PaymasterPostOpGasLimit ?? "0").Value;
+
+                // Estimate gas
+
+                if (
+                    partialUserOp.PreVerificationGas.IsZero
+                    || partialUserOp.VerificationGasLimit.IsZero
+                    || partialUserOp.CallGasLimit.IsZero
+                    || partialUserOp.PaymasterVerificationGasLimit.IsZero
+                    || partialUserOp.PaymasterPostOpGasLimit.IsZero
+                )
+                {
+                    var gasEstimates = await BundlerClient.EthEstimateUserOperationGas(Client, _bundlerUrl, requestId, EncodeUserOperation(partialUserOp), _entryPointContract.Address);
+                    partialUserOp.CallGasLimit = 21000 + new HexBigInteger(gasEstimates.CallGasLimit).Value;
+                    partialUserOp.VerificationGasLimit = new HexBigInteger(gasEstimates.VerificationGasLimit).Value;
+                    partialUserOp.PreVerificationGas = new HexBigInteger(gasEstimates.PreVerificationGas).Value;
+                    partialUserOp.PaymasterVerificationGasLimit = new HexBigInteger(gasEstimates.PaymasterVerificationGasLimit).Value;
+                    partialUserOp.PaymasterPostOpGasLimit = new HexBigInteger(gasEstimates.PaymasterPostOpGasLimit).Value;
+
+                    // Update paymaster data if any
+
+                    res = await GetPaymasterAndData(requestId, EncodeUserOperation(partialUserOp));
+                    partialUserOp.Paymaster = res.Paymaster;
+                    partialUserOp.PaymasterData = res.PaymasterData.HexToBytes();
+                }
+
+                // Hash, sign and encode the user operation
+
+                partialUserOp.Signature = await HashAndSignUserOp(partialUserOp, _entryPointContract);
+
+                return partialUserOp;
+            }
         }
 
-        private async Task<string> SendUserOp(UserOperation userOperation, int? requestId = null)
+        private async Task<string> SendUserOp(object userOperation, int? requestId = null)
         {
             requestId ??= 1;
 
+            // Encode op
+
+            object encodedOp;
+            if (userOperation is UserOperationV6)
+            {
+                encodedOp = EncodeUserOperation(userOperation as UserOperationV6);
+            }
+            else if (userOperation is UserOperationV7)
+            {
+                encodedOp = EncodeUserOperation(userOperation as UserOperationV7);
+            }
+            else
+            {
+                throw new Exception("Invalid signed operation type");
+            }
+
             // Send the user operation
 
-            var userOpHash = await BundlerClient.EthSendUserOperation(Client, _bundlerUrl, requestId, EncodeUserOperation(userOperation), _entryPointContract.Address);
+            var userOpHash = await BundlerClient.EthSendUserOperation(Client, _bundlerUrl, requestId, encodedOp, _entryPointContract.Address);
 
             // Wait for the transaction to be mined
 
@@ -275,9 +367,10 @@ namespace Thirdweb
             while (txHash == null)
             {
                 var userOpReceipt = await BundlerClient.EthGetUserOperationReceipt(Client, _bundlerUrl, requestId, userOpHash);
-                txHash = userOpReceipt?.receipt?.TransactionHash;
+                txHash = userOpReceipt?.Receipt?.TransactionHash;
                 await Task.Delay(1000).ConfigureAwait(false);
             }
+
             IsDeploying = false;
             return txHash;
         }
@@ -296,7 +389,7 @@ namespace Thirdweb
             if (_gasless)
             {
                 var result = await BundlerClient.ZkPaymasterData(Client, _paymasterUrl, 1, transactionInput);
-                return (result.paymaster, result.paymasterInput);
+                return (result.Paymaster, result.PaymasterInput);
             }
             else
             {
@@ -307,44 +400,108 @@ namespace Thirdweb
         private async Task<string> ZkBroadcastTransaction(object transactionInput)
         {
             var result = await BundlerClient.ZkBroadcastTransaction(Client, _bundlerUrl, 1, transactionInput);
-            return result.transactionHash;
+            return result.TransactionHash;
         }
 
-        private async Task<byte[]> GetPaymasterAndData(object requestId, UserOperationHexified userOp)
+        private async Task<PMSponsorOperationResponse> GetPaymasterAndData(object requestId, object userOp)
         {
-            if (_gasless)
-            {
-                var paymasterAndData = await BundlerClient.PMSponsorUserOperation(Client, _paymasterUrl, requestId, userOp, _entryPointContract.Address);
-                return paymasterAndData.paymasterAndData.HexToByteArray();
-            }
-            else
-            {
-                return new byte[] { };
-            }
+            return _gasless ? await BundlerClient.PMSponsorUserOperation(Client, _paymasterUrl, requestId, userOp, _entryPointContract.Address) : new PMSponsorOperationResponse();
         }
 
-        private async Task<byte[]> HashAndSignUserOp(UserOperation userOp, ThirdwebContract entryPointContract)
+        private async Task<byte[]> HashAndSignUserOp(UserOperationV6 userOp, ThirdwebContract entryPointContract)
         {
             var userOpHash = await ThirdwebContract.Read<byte[]>(entryPointContract, "getUserOpHash", userOp);
             var sig = await _personalAccount.PersonalSign(userOpHash);
-            return sig.HexToByteArray();
+            return sig.HexToBytes();
         }
 
-        private UserOperationHexified EncodeUserOperation(UserOperation userOperation)
+        private async Task<byte[]> HashAndSignUserOp(UserOperationV7 userOp, ThirdwebContract entryPointContract)
         {
-            return new UserOperationHexified()
+            var factoryBytes = userOp.Factory.HexToBytes();
+            var factoryDataBytes = userOp.FactoryData;
+            var initCodeBuffer = new byte[factoryBytes.Length + factoryDataBytes.Length];
+            Buffer.BlockCopy(factoryBytes, 0, initCodeBuffer, 0, factoryBytes.Length);
+            Buffer.BlockCopy(factoryDataBytes, 0, initCodeBuffer, factoryBytes.Length, factoryDataBytes.Length);
+
+            var verificationGasLimitBytes = userOp.VerificationGasLimit.ToHexBigInteger().HexValue.HexToBytes().PadBytes(16);
+            var callGasLimitBytes = userOp.CallGasLimit.ToHexBigInteger().HexValue.HexToBytes().PadBytes(16);
+            var accountGasLimitsBuffer = new byte[32];
+            Buffer.BlockCopy(verificationGasLimitBytes, 0, accountGasLimitsBuffer, 0, 16);
+            Buffer.BlockCopy(callGasLimitBytes, 0, accountGasLimitsBuffer, 16, 16);
+
+            var maxPriorityFeePerGasBytes = userOp.MaxPriorityFeePerGas.ToHexBigInteger().HexValue.HexToBytes().PadBytes(16);
+            var maxFeePerGasBytes = userOp.MaxFeePerGas.ToHexBigInteger().HexValue.HexToBytes().PadBytes(16);
+            var gasFeesBuffer = new byte[32];
+            Buffer.BlockCopy(maxPriorityFeePerGasBytes, 0, gasFeesBuffer, 0, 16);
+            Buffer.BlockCopy(maxFeePerGasBytes, 0, gasFeesBuffer, 16, 16);
+
+            var paymasterBytes = userOp.Paymaster.HexToBytes();
+            var paymasterVerificationGasLimitBytes = userOp.PaymasterVerificationGasLimit.ToHexBigInteger().HexValue.HexToBytes().PadBytes(16);
+            var paymasterPostOpGasLimitBytes = userOp.PaymasterPostOpGasLimit.ToHexBigInteger().HexValue.HexToBytes().PadBytes(16);
+            var paymasterDataBytes = userOp.PaymasterData;
+            var paymasterAndDataBuffer = new byte[20 + 16 + 16 + paymasterDataBytes.Length];
+            Buffer.BlockCopy(paymasterBytes, 0, paymasterAndDataBuffer, 0, 20);
+            Buffer.BlockCopy(paymasterVerificationGasLimitBytes, 0, paymasterAndDataBuffer, 20, 16);
+            Buffer.BlockCopy(paymasterPostOpGasLimitBytes, 0, paymasterAndDataBuffer, 20 + 16, 16);
+            Buffer.BlockCopy(paymasterDataBytes, 0, paymasterAndDataBuffer, 20 + 16 + 16, paymasterDataBytes.Length);
+
+            var packedOp = new PackedUserOperation()
+            {
+                Sender = userOp.Sender,
+                Nonce = userOp.Nonce,
+                InitCode = initCodeBuffer,
+                CallData = userOp.CallData,
+                AccountGasLimits = accountGasLimitsBuffer,
+                PreVerificationGas = userOp.PreVerificationGas,
+                GasFees = gasFeesBuffer,
+                PaymasterAndData = paymasterAndDataBuffer,
+                Signature = userOp.Signature
+            };
+
+            var userOpHash = await ThirdwebContract.Read<byte[]>(entryPointContract, "getUserOpHash", packedOp);
+
+            var sig = await _personalAccount.PersonalSign(userOpHash);
+
+            return sig.HexToBytes();
+        }
+
+        private UserOperationHexifiedV6 EncodeUserOperation(UserOperationV6 userOperation)
+        {
+            return new UserOperationHexifiedV6()
             {
                 sender = userOperation.Sender,
                 nonce = userOperation.Nonce.ToHexBigInteger().HexValue,
-                initCode = userOperation.InitCode.ToHex(true),
-                callData = userOperation.CallData.ToHex(true),
+                initCode = userOperation.InitCode.BytesToHex(),
+                callData = userOperation.CallData.BytesToHex(),
                 callGasLimit = userOperation.CallGasLimit.ToHexBigInteger().HexValue,
                 verificationGasLimit = userOperation.VerificationGasLimit.ToHexBigInteger().HexValue,
                 preVerificationGas = userOperation.PreVerificationGas.ToHexBigInteger().HexValue,
                 maxFeePerGas = userOperation.MaxFeePerGas.ToHexBigInteger().HexValue,
                 maxPriorityFeePerGas = userOperation.MaxPriorityFeePerGas.ToHexBigInteger().HexValue,
-                paymasterAndData = userOperation.PaymasterAndData.ToHex(true),
-                signature = userOperation.Signature.ToHex(true)
+                paymasterAndData = userOperation.PaymasterAndData.BytesToHex(),
+                signature = userOperation.Signature.BytesToHex()
+            };
+        }
+
+        private UserOperationHexifiedV7 EncodeUserOperation(UserOperationV7 userOperation)
+        {
+            return new UserOperationHexifiedV7()
+            {
+                sender = userOperation.Sender,
+                nonce = Utils.HexConcat(Constants.ADDRESS_ZERO, userOperation.Nonce.ToHexBigInteger().HexValue),
+                factory = userOperation.Factory,
+                factoryData = userOperation.FactoryData.BytesToHex(),
+                callData = userOperation.CallData.BytesToHex(),
+                callGasLimit = userOperation.CallGasLimit.ToHexBigInteger().HexValue,
+                verificationGasLimit = userOperation.VerificationGasLimit.ToHexBigInteger().HexValue,
+                preVerificationGas = userOperation.PreVerificationGas.ToHexBigInteger().HexValue,
+                maxFeePerGas = userOperation.MaxFeePerGas.ToHexBigInteger().HexValue,
+                maxPriorityFeePerGas = userOperation.MaxPriorityFeePerGas.ToHexBigInteger().HexValue,
+                paymaster = userOperation.Paymaster,
+                paymasterVerificationGasLimit = userOperation.PaymasterVerificationGasLimit.ToHexBigInteger().HexValue,
+                paymasterPostOpGasLimit = userOperation.PaymasterPostOpGasLimit.ToHexBigInteger().HexValue,
+                paymasterData = userOperation.PaymasterData.BytesToHex(),
+                signature = userOperation.Signature.BytesToHex()
             };
         }
 
@@ -464,8 +621,8 @@ namespace Thirdweb
         {
             try
             {
-                var magicValue = await ThirdwebContract.Read<byte[]>(_accountContract, "isValidSignature", message.HashPrefixedMessage().HexToByteArray(), signature.HexToByteArray());
-                return magicValue.ToHex(true) == new byte[] { 0x16, 0x26, 0xba, 0x7e }.ToHex(true);
+                var magicValue = await ThirdwebContract.Read<byte[]>(_accountContract, "isValidSignature", message.HashPrefixedMessage().HexToBytes(), signature.HexToBytes());
+                return magicValue.BytesToHex() == new byte[] { 0x16, 0x26, 0xba, 0x7e }.BytesToHex();
             }
             catch
             {
@@ -502,7 +659,7 @@ namespace Thirdweb
             };
 
             var signature = await EIP712.GenerateSignature_SmartAccount("Account", "1", _chainId, await GetAddress(), request, _personalAccount);
-            var data = new Contract(null, _accountContract.Abi, _accountContract.Address).GetFunction("setPermissionsForSigner").GetData(request, signature.HexToByteArray());
+            var data = new Contract(null, _accountContract.Abi, _accountContract.Address).GetFunction("setPermissionsForSigner").GetData(request, signature.HexToBytes());
             var txInput = new ThirdwebTransactionInput()
             {
                 From = await GetAddress(),
@@ -535,7 +692,7 @@ namespace Thirdweb
             };
 
             var signature = await EIP712.GenerateSignature_SmartAccount("Account", "1", _chainId, await GetAddress(), request, _personalAccount);
-            var data = new Contract(null, _accountContract.Abi, _accountContract.Address).GetFunction("setPermissionsForSigner").GetData(request, signature.HexToByteArray());
+            var data = new Contract(null, _accountContract.Abi, _accountContract.Address).GetFunction("setPermissionsForSigner").GetData(request, signature.HexToBytes());
             var txInput = new ThirdwebTransactionInput()
             {
                 From = await GetAddress(),
@@ -568,7 +725,7 @@ namespace Thirdweb
             };
 
             var signature = await EIP712.GenerateSignature_SmartAccount("Account", "1", _chainId, await GetAddress(), request, _personalAccount);
-            var data = new Contract(null, _accountContract.Abi, _accountContract.Address).GetFunction("setPermissionsForSigner").GetData(request, signature.HexToByteArray());
+            var data = new Contract(null, _accountContract.Abi, _accountContract.Address).GetFunction("setPermissionsForSigner").GetData(request, signature.HexToBytes());
             var txInput = new ThirdwebTransactionInput()
             {
                 From = await GetAddress(),
@@ -605,8 +762,23 @@ namespace Thirdweb
             }
 
             var signedOp = await SignUserOp(transaction, null, simulation: true);
-            var cost = signedOp.CallGasLimit + signedOp.VerificationGasLimit + signedOp.PreVerificationGas;
-            return cost;
+            if (signedOp is UserOperationV6)
+            {
+                var castSignedOp = signedOp as UserOperationV6;
+                var cost = castSignedOp.CallGasLimit + castSignedOp.VerificationGasLimit + castSignedOp.PreVerificationGas;
+                return cost;
+            }
+            else if (signedOp is UserOperationV7)
+            {
+                var castSignedOp = signedOp as UserOperationV7;
+                var cost =
+                    castSignedOp.CallGasLimit + castSignedOp.VerificationGasLimit + castSignedOp.PreVerificationGas + castSignedOp.PaymasterVerificationGasLimit + castSignedOp.PaymasterPostOpGasLimit;
+                return cost;
+            }
+            else
+            {
+                throw new Exception("Invalid signed operation type");
+            }
         }
 
         public async Task<string> SignTransaction(ThirdwebTransactionInput transaction)
@@ -616,7 +788,21 @@ namespace Thirdweb
                 throw new Exception("Offline Signing is not supported in ZkSync");
             }
 
-            return JsonConvert.SerializeObject(EncodeUserOperation(await SignUserOp(transaction)));
+            var signedOp = await SignUserOp(transaction);
+            if (signedOp is UserOperationV6)
+            {
+                var encodedOp = EncodeUserOperation(signedOp as UserOperationV6);
+                return JsonConvert.SerializeObject(encodedOp);
+            }
+            else if (signedOp is UserOperationV7)
+            {
+                var encodedOp = EncodeUserOperation(signedOp as UserOperationV7);
+                return JsonConvert.SerializeObject(encodedOp);
+            }
+            else
+            {
+                throw new Exception("Invalid signed operation type");
+            }
         }
 
         public async Task<bool> IsConnected()
